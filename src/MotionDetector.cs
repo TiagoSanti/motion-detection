@@ -1,38 +1,25 @@
 ﻿using OpenCvSharp;
 
-namespace MotionDetection
+namespace movement_detection.src
 {
     public class MotionDetector
     {
-        private Mat diff;
-        private Mat gray;
-        private Mat blur;
-        private Mat thresh;
-        private Mat dilated;
-        private Mat hierarchy;
-        private Mat[] contours;
-        private Point textLocation = new Point(10, 20);
-        private Size resizeSize = new Size();
-        private Dictionary<string, Mat> processingMats;
+        private Point textLocation = new Point(10, 25);
+        private BackgroundSubtractorMOG bg;
 
         public MotionDetector()
         {
-            this.diff = new Mat();
-            this.gray = new Mat();
-            this.blur = new Mat();
-            this.thresh = new Mat();
-            this.dilated = new Mat();
-            this.hierarchy = new Mat();
-            this.contours = Array.Empty<Mat>();
-            this.resizeSize = Size.Zero;
-            this.processingMats = new Dictionary<string, Mat>();
+            bg = BackgroundSubtractorMOG.Create(backgroundRatio: 0.8);
         }
 
-        public bool IsMotionDetected(Mat frame1, Mat frame2, bool drawMotion, bool showAllSteps)
+        public bool IsMotionDetected(Mat frame1, bool drawMotion)
         {
             bool motionDetected = false;
-            this.contours = GetContours(frame1, frame2);
-            
+
+            using Mat processMat = new();
+            Cv2.CopyTo(frame1, processMat);
+            Mat[] contours = Process(processMat);
+
             if (HasMotion(contours))
             {
                 motionDetected = true;
@@ -43,44 +30,33 @@ namespace MotionDetection
                 }
             }
 
-            if (showAllSteps)
-            {
-                if (this.resizeSize.Equals(Size.Zero))
-                {
-                    this.resizeSize.Width = frame1.Width / 2;
-                    this.resizeSize.Height = frame1.Height / 2;
-                }
-
-                ShowAllSteps();
-            }
-
             return motionDetected;
         }
 
-        private void ShowAllSteps()
+        public Mat[] Process(Mat frame)
         {
-            this.processingMats["1 - diff"] = diff.Resize(resizeSize);
-            this.processingMats["2 - gray"] = gray.Resize(this.resizeSize);
-            this.processingMats["3 - blur"] = blur.Resize(resizeSize);
-            this.processingMats["4 - thresh"] = thresh.Resize(resizeSize);
-            this.processingMats["5 - dilated"] = dilated.Resize(resizeSize);
+            using Mat bg_mask = new();
+            frame.CopyTo(bg_mask);
 
-            foreach (string key in processingMats.Keys)
-            {
-                Cv2.ImShow(key, processingMats[key]);
-                processingMats[key].Dispose();
-            }
+            bg.Apply(bg_mask, bg_mask);
+            Cv2.MorphologyEx(bg_mask, bg_mask, MorphTypes.Open, Cv2.GetStructuringElement(MorphShapes.Ellipse, new Size(3, 3)));
+            Cv2.MedianBlur(bg_mask, bg_mask, 5);
+            Cv2.ImShow("processing", bg_mask);
+
+            Cv2.FindContours(bg_mask, out Mat[] contours, new Mat(), mode: RetrievalModes.External, method: ContourApproximationModes.ApproxSimple);
+
+            return contours;
         }
 
         private void DrawMotion(Mat frame1, Mat[] contours)
         {
             foreach (Mat contour in contours)
             {
-                if (Cv2.ContourArea(contour) > 900)
+                if (Cv2.ContourArea(contour) > 250)
                 {
                     Rect rect = Cv2.BoundingRect(contour);
                     Cv2.Rectangle(frame1, rect, Scalar.Red, 1);
-                    Cv2.PutText(frame1, "Motion detected", this.textLocation, HersheyFonts.HersheySimplex, 1, Scalar.Red);
+                    Cv2.PutText(frame1, "Motion detected", textLocation, HersheyFonts.HersheySimplex, fontScale: 1, Scalar.Red, thickness: 2);
                 }
             }
         }
@@ -96,45 +72,6 @@ namespace MotionDetection
             }
 
             return false;
-        }
-
-        private Mat[] GetContours(Mat frame1, Mat frame2)
-        {
-            Cv2.Absdiff(frame1, frame2, diff);
-            Cv2.CvtColor(diff, gray, ColorConversionCodes.BGR2GRAY);
-            Cv2.GaussianBlur(gray, blur, new Size(5, 5), 0);
-            Cv2.Threshold(blur, thresh, 20, 255, ThresholdTypes.Binary);
-            Cv2.Dilate(thresh, dilated, null, iterations: 3);
-            Cv2.FindContours(dilated, out Mat[] contours, hierarchy, mode: RetrievalModes.Tree, method: ContourApproximationModes.ApproxSimple);
-
-            return contours;
-        }
-
-        public void DisposeAllMats()
-        {
-            this.diff.Dispose();
-            this.gray.Dispose();
-            this.blur.Dispose();
-            this.thresh.Dispose();
-            this.dilated.Dispose();
-            this.hierarchy.Dispose();
-            foreach (Mat contour in this.contours)
-                contour.Dispose();
-        }
-
-        public void FinishDetection()
-        {
-            foreach (string title in this.processingMats.Keys)
-            {
-                try
-                {
-                    Cv2.DestroyWindow(title);
-                }
-                catch
-                {
-                    continue;
-                }
-            }
         }
     }
 }

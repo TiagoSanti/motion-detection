@@ -1,60 +1,49 @@
 ﻿using OpenCvSharp;
-using System.Threading.Tasks;
 
-namespace MotionDetection
+namespace movement_detection.src
 {
     class Program
     {
         static void Main()
         {
-            MotionDetector _detector = new MotionDetector();
+            MotionDetector _detector = new();
 
             Task task = Task.Run(() => InitDetection(
-                windowTitle: "task",
+                windowTitle: "webcam",
                 source: 0,
                 detector: _detector,
                 drawMotion: true,
-                showAllSteps: true)
+                detectEPI: true)
             );
 
-            Task task2 = Task.Run(() => InitDetection(
-                windowTitle: "task2",
-                source: @"rtsp://centro.inovacao:Dvr!9Covid@192.168.23.34:8082/cam/realmonitor?channel=2&subtype=0",
-                detector: _detector,
-                drawMotion: true,
-                showAllSteps: false)
-            );
-
-            Task.WaitAll(task, task2);
+            task.Wait();
         }
 
-        private static void InitDetection(string windowTitle, dynamic source, MotionDetector detector, bool drawMotion, bool showAllSteps)
+        private static void InitDetection(MotionDetector detector, string windowTitle, dynamic source, bool drawMotion, bool detectEPI)
         {
-            VideoCapture videoCapture = new VideoCapture(source);
-
-            Mat frame1 = videoCapture.RetrieveMat();
-            Mat frame2 = videoCapture.RetrieveMat();
+            using VideoCapture videoCapture = new VideoCapture(source);
+            using Mat frameCopy = new();
 
             while (videoCapture.IsOpened())
             {
-                _ = detector.IsMotionDetected(frame1, frame2, drawMotion, showAllSteps);
-
-                Cv2.ImShow(windowTitle, frame1);
-
-                frame1.Dispose();
-                frame1 = frame2;
-                frame2 = videoCapture.RetrieveMat();
-
-                if (Cv2.WaitKey(40) == 27)
+                using Mat frame = videoCapture.RetrieveMat();
+                if (!frame.Empty())
                 {
-                    detector.FinishDetection();
+                    frame.CopyTo(frameCopy);
+
+                    detector.IsMotionDetected(frameCopy, drawMotion);
+
+                    Cv2.ImShow(windowTitle, frameCopy);
+
+                }
+
+                if (Cv2.WaitKey(40) == 'q')
+                {
                     break;
                 }
             }
 
             Cv2.DestroyWindow(windowTitle);
-            videoCapture.Dispose();
-            frame2.Dispose();
         }
     }
 }
