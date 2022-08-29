@@ -9,8 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="OpenCvSharp4" Version="4.6.0.20220608" />
+    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.6.0.20220608" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.6.0.20220608" />
+    <PackageReference Include="RestSharp" Version="108.0.1" />
+    <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
   </ItemGroup>
 
 </Project>
