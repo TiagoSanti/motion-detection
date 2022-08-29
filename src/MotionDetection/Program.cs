@@ -9,7 +9,7 @@ namespace MotionDetection
     {
         static void Main()
         {
-            MotionDetector _detector = new MotionDetector();
+            MotionDetector _detector = new();
             PPERecognitionApiClient _ppeRecognitionApiClient = new();
 
             Task task = Task.Run(() => InitDetection(
@@ -21,12 +21,12 @@ namespace MotionDetection
                 detectEPI: true)
             );
 
-            Task.WaitAll(task);
+            task.Wait();
         }
 
         private static void InitDetection(MotionDetector detector, PPERecognitionApiClient ppeRecognitionApiClient, string windowTitle, dynamic source, bool drawMotion, bool detectEPI)
         {
-            using VideoCapture videoCapture = new VideoCapture(source);
+            using VideoCapture videoCapture = new(source);
             using Mat frameCopy = new();
 
             while (videoCapture.IsOpened())
@@ -63,7 +63,6 @@ namespace MotionDetection
                         catch { }
                     }
 
-                    frameCopy.Resize(new OpenCvSharp.Size(frameCopy.Width / 2, frameCopy.Height / 2));
                     Cv2.ImShow(windowTitle, frameCopy);
 
                 }
@@ -74,7 +73,6 @@ namespace MotionDetection
                 }
             }
 
-            //Cv2.DestroyWindow(windowTitle + " | EPI result");
             Cv2.DestroyWindow(windowTitle);
         }
     }
