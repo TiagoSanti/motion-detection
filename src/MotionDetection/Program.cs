@@ -36,7 +36,7 @@ namespace MotionDetection
                 {
                     frame.CopyTo(frameCopy);
 
-                    if (detector.IsMotionDetected(frameCopy, drawMotion) && detectEPI)
+                    if (detector.IsMotionDetected(frameCopy) && detectEPI)
                     {
                         Bitmap bitmapFrame = frame.ToBitmap();
                         bitmapFrame = PPERecognitionApiClient.Resize(bitmapFrame, new System.Drawing.Size(640, 480));
